@@ -1,6 +1,7 @@
 const router = require('express').Router()
 const NoteModel = require('./model') //constructors or model names should be capitalized
 const passport = require('../auth')
+
 //get all
 router.get('/',  
   (req, res, next)=>{

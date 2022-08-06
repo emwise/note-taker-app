@@ -1,0 +1,12 @@
+
+TODO
+- need to check second password on register with first to see if match
+- delete find user and refactor _id uses 
+- move auth function into it's own file and check for safety
+
+Lessons: 
+
+- keep your codebase separate from that of mongodb abd other resources (ie. dont use _id in your code just because mongo uses it). This makes it less confusing and promotes reusability. 
+- maintain rest api structure and if you need api that just return data or just redirect to a page keep those api in two separate files 
+- use cookies set in the response to set the auth header in the next request, this elimates the need to js in each page view and will keep the app lighter 
+- remember the web paradigm of post -> redirect -> get (i think) when constructing fetches and routes 

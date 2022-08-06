@@ -1,0 +1,16 @@
+<div class="w-25 p-3 my-4 mx-auto" style="background-color: rgb(124, 192, 52); border-radius: 10px;">
+  <h3 class="text-center p-1 m-1 ">Login</h3>
+  <form class="" method="post" action="/users/login">  
+    <div class="container">   
+      <label class="mt-2 mb-1 fs-4">Email </label>   
+      <input class="mt-1 mb-2 py-1 w-100 border border-1 border-secondary rounded-3" type="text" placeholder="Enter Email" name="email" required>  
+      <label class="mt-2 mb-1 fs-4">Password </label>   
+      <input class="mt-1 mb-2 py-1 w-100 border border-1 border-secondary rounded-3" type="password" placeholder="Enter Password" name="password" required>  
+      <button class="my-4 w-100 btn btn-success" type="submit">Login</button>   
+      <a class="my-4 w-100 btn btn-success" href="/users/register">Register for an Account</a> 
+      {{!-- <input type="checkbox" checked="checked"> Remember me    --}}
+      {{!-- Forgot <a href="#"> password? </a>    --}}
+    </div>   
+  </form>    
+  <div class="text-center"><a  class="btn btn-danger" href="/">Back</a></div>
+</div>

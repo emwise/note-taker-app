@@ -49,8 +49,10 @@ router.get('/user',
     })
 })
 
-router.get('/create', (req, res, next)=>{
-  res.render('createNote');
+router.get('/create', 
+  auth,
+  (req, res, next)=>{
+    res.render('createNote');
 })
 
 //enter a new note
@@ -157,6 +159,10 @@ router.delete('/:id',
 
 //replaces passport.authenticate()
 function auth(req, res, next){
+  if(req.cookies['Authentication'] === undefined || req.cookies['Email'] === undefined ){
+    res.redirect(303, `/users/login`)
+    return
+  }
   const accessToken = req.cookies['Authentication'];
   const userEmail = req.cookies['Email'];
   UserModel.findOne({ email: userEmail})
@@ -165,7 +171,7 @@ function auth(req, res, next){
         req.userDocument = userDocument;
         next()
       }else{
-        res.send('unauthorized');
+        res.redirect(303, `/users/login`)
       }
     })
 }

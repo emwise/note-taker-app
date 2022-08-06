@@ -10,3 +10,6 @@ Lessons:
 - maintain rest api structure and if you need api that just return data or just redirect to a page keep those api in two separate files 
 - use cookies set in the response to set the auth header in the next request, this elimates the need to js in each page view and will keep the app lighter 
 - remember the web paradigm of post -> redirect -> get (i think) when constructing fetches and routes 
+
+heroku link 
+https://note-taking-application10.herokuapp.com/

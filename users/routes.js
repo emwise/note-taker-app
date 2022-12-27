@@ -3,16 +3,42 @@ const UserModel = require('./model');
 var bcrypt = require('bcryptjs');
 const Chance = require('chance');
 const chance = new Chance();
+const passport = require('../auth')
+
+router.get('/login', (req, res, next)=>{
+  res.render('loginPanel');
+})
 
 router.post('/login', 
-  loginInputValidation,
+  loginInputValidation, //TODO create error's on the login for each middleware
   findUser, 
   checkPassword, 
   giveAccess, 
   (req, res, next)=>{
-  
-  res.send('Login')
+    res.append("Set-Cookie", `Email=${req.userDocument.email}; Path=/; HttpOnly;` )
+    res.append("Set-Cookie", `Authentication=${req.userDocument.accessToken}; Path=/; HttpOnly;` )
+    res.redirect(303, `/notes`) //redirects to all notes page
 })
+
+router.get('/home', 
+  isLoggedIn,
+  (req, res, next)=>{
+    res.redirect(303, `/notes/user`);
+    //res.send(req.cookies['Email'])
+})
+
+router.get('/logout', 
+  (req, res, next)=>{
+    res.clearCookie("Authentication") //works
+    res.clearCookie("Email")
+    //res.clearCookie("<cookie>", {path:'/users'}) //works for path's other than default '/'
+    res.render("logoutConfirmation")
+})
+
+router.get('/register',
+  (req, res, next)=>{
+    res.render('registerPanel')
+  })
 
 router.post('/register', 
   registerInputValidation, 
@@ -32,7 +58,8 @@ router.post('/register',
     .then((document)=>{
       if(document){
         document.password = undefined
-        res.json(document)
+        res.append("Set-Cookie", `Email=${req.body.email}; Path=/; HttpOnly;` )
+        res.redirect(303, `/users/login`) //redirects to login page
       }else{
         res.send('user did not save')
       }
@@ -111,7 +138,6 @@ function isEmailAlreadyInUse(req, res, next){
 
 function hashPassword(req, res, next){
   const { password } = req.body
-
   bcrypt.genSalt(10, function(err, salt) {
     bcrypt.hash(password, salt, function(err, hash) {
         if(err){
@@ -193,16 +219,26 @@ function giveAccess(req, res, next){
   req.userDocument.save() //saves this to the database. userDocument is an instance of the mongoose model and comes with these methods.
     .then((result)=>{
       if(result){
-        res.send(accessToken)
+        res.clearCookie("Authentication") 
+        res.clearCookie("Email")
+        next()
       }else{
         res.status(400).send('error with access token')
       }
     })
     .catch((err)=>{
       console.log(err)
-      res.status(500).send('Error happened.')
+      res.status(500).send('Error happened here.')
     })
 }
 
+function isLoggedIn(req, res, next){
+  const userEmail = req.cookies['Email']
+  if(userEmail === undefined){
+    res.render('pleaseLogin')
+  }else{
+    next()
+  }
+}
 
 module.exports = router

@@ -1,18 +1,22 @@
 const router = require('express').Router()
 const NoteModel = require('./model') //constructors or model names should be capitalized
-const passport = require('../auth')
+//const auth = require('../auth')
+const UserModel = require('../users/model')
 
-//get all
+
+//this route will send json and inject it into a handlebars template. 
 router.get('/',  
   (req, res, next)=>{
-  NoteModel.find()
+  NoteModel.find().lean()
     .then((results)=>{
       if(!results){
         res
           .status(404)
           .send('No Notes Found')
       }else{
-        res.json(results)
+        //res.json(results) //works
+        //res.send(results) //works the same
+        res.render("viewAllNotes", {json: results})
       }
     })
     .catch((err)=>{
@@ -23,43 +27,52 @@ router.get('/',
     })//will catch any error not forseen
 })
 
-//get single note by id
-router.get('/:id', (req, res, next)=>{
-  NoteModel.findById(req.params.id)
-    .then((results)=>{
-      if(!results){
+//get notes by user email
+router.get('/user', 
+  auth,
+  (req, res, next)=>{
+    NoteModel.find({ authorId: req.userDocument._id }).lean()
+      .then((results)=>{
+        if(!results){
+          res
+            .status(404)
+            .send('No Notes Found')
+        }else{
+          res.render("loginLandingPage", {json: results})
+        }
+      })
+      .catch((err)=>{
+        console.log(err)
         res
-          .status(404)
-          .send('No Note Found')
-      }else{
-        res.json(results)
-      }
-    })
-    .catch((err)=>{
-      console.log(err)
-      res
-        .send(500)
-        .send("Error happened")
+          .send(500)
+          .send("Error happened")
     })
 })
 
+router.get('/create', 
+  auth,
+  (req, res, next)=>{
+    res.render('createNote');
+})
+
 //enter a new note
-router.post('/', 
-  passport.authenticate('bearer', { session: false }),
+router.post('/create',
+  auth,
   inputValidation, //this middleware will check data (validate) and then allow the
   //program to progress to the next middleware (creating and saving the note)
   (req, res, next)=>{
     const newNote = new NoteModel({
     title: req.body.title,
     body: req.body.body,
-    authorId: req.user._id //attaches the user id to this field which is known via the request object because they had to login
+    authorId: req.userDocument._id //attaches the user id to this field which is known via the request object because they had to login
     })
 
   newNote
     .save() //this will attempt to save the data in the db and will return a promise
     .then((document)=>{
       if(document){
-        res.json(document)
+        //res.send(document)
+        res.render("noteSavedLandingPage")
       }else{
         res.send('document did not save')
       }
@@ -71,23 +84,17 @@ router.post('/',
   
 })
 
-//update note
-//.put() accepts the url path firsth and then chains together middleware so long as the first middleware successfully calls next()
-router.put('/:id', 
-passport.authenticate('bearer', { session: false }),
-updateInputValidation, 
-findNote,
-isAuthor,
-(req, res, next)=>{
-  NoteModel.findOneAndUpdate({_id: req.params.id}, req.updateObj, 
-    {new: true}) //this method takes three parameters: finding the data by key, what to change, and whether or not to display the older version of the data or the newer version with the updates upon res.send()
+//these api are example of rest api structure and should be retained. They only differ by the get, post, put, and delete calls and perform different funcions based on each. 
+//get single note by id
+router.get('/:id', (req, res, next)=>{
+  NoteModel.findById(req.params.id).lean()
     .then((results)=>{
       if(!results){
         res
           .status(404)
           .send('No Note Found')
       }else{
-        res.json(results)
+        res.render("editNote", {json: results})
       }
     })
     .catch((err)=>{
@@ -98,9 +105,37 @@ isAuthor,
     })
 })
 
+//update note
+//.put() accepts the url path first and then chains together middleware so long as the first middleware successfully calls next()
+router.put('/:id', 
+  auth,
+  //passport.authenticate('bearer', { session: false }),
+  updateInputValidation, 
+  findNote,
+  isAuthor,
+  (req, res, next)=>{
+    NoteModel.findOneAndUpdate({_id: req.params.id}, req.updateObj, 
+      {new: true}) //this method takes three parameters: finding the data by key, what to change, and whether or not to display the older version of the data or the newer version with the updates upon res.send()
+      .then((results)=>{
+        if(!results){
+          res
+            .status(404)
+            .send('No Note Found')
+        }else{
+          res.json(results)
+        }
+      })
+      .catch((err)=>{
+        console.log(err)
+        res
+          .send(500)
+          .send("Error happened")
+      })
+})
+
 //delete a note
 router.delete('/:id', 
-  passport.authenticate('bearer', { session: false }),
+  auth,
   findNote,
   isAuthor,
   (req, res, next)=>{
@@ -111,7 +146,7 @@ router.delete('/:id',
             .status(404)
             .send('No Note Found')
         }else{
-          res.send("Successfully deleted!")
+          res.send(results)
         }
       })
       .catch((err)=>{
@@ -121,6 +156,25 @@ router.delete('/:id',
           .send("Error happened")
       })
 })
+
+//replaces passport.authenticate()
+function auth(req, res, next){
+  if(req.cookies['Authentication'] === undefined || req.cookies['Email'] === undefined ){
+    res.redirect(303, `/users/login`)
+    return
+  }
+  const accessToken = req.cookies['Authentication'];
+  const userEmail = req.cookies['Email'];
+  UserModel.findOne({ email: userEmail})
+    .then((userDocument)=>{
+      if(accessToken === userDocument.accessToken){
+        req.userDocument = userDocument;
+        next()
+      }else{
+        res.redirect(303, `/users/login`)
+      }
+    })
+}
 
 function inputValidation(req, res, next){
   //make sure required field are there and if missing display error
@@ -154,7 +208,7 @@ function updateInputValidation(req, res, next){
     updateObj.body = body
   }
 
-  req.updateObj = updateObj //this modifies the universal request object and allows the updateObj object to be accessible via any req in any of these other middlewares. 
+  req.updateObj = updateObj //this modifies the universal request object and allows the updateObj object to be accessible via any req in any of these other middleware. 
 
   next()
 }
@@ -176,7 +230,7 @@ function findNote(req, res, next){
 }
 
 function isAuthor(req, res, next){
-  if((req.user._id).equals(req.noteDocument.authorId)){
+  if((req.userDocument._id).equals(req.noteDocument.authorId)){
     next()
   }else{
     res.status(401).send('You are not authorized to take this action')
@@ -184,3 +238,10 @@ function isAuthor(req, res, next){
 }
 
 module.exports = router
+
+
+//this is for exporting the two separate api and routes  
+// module.exports = {
+//   pageRoutes: 
+//   apiRoutes: 
+// }

@@ -1,0 +1,77 @@
+<div class="w-75 p-3 my-4 mx-auto" style="background-color: rgb(124, 192, 52); border-radius: 10px;">
+  <h3 class="">Edit Note</h3>
+  <ul id="#notesList" class="list-unstyled">
+    <li id={{json._id}} class="bg-white m-4" style="border-radius: 10px;">
+      <div class="fs-3 fw-bold p-2">
+        <label for="title">Title:</label><br>
+        <input class="w-100" type="text" id="title" value="{{json.title}}" required><br>
+      </div>
+      <div class="p-2 fs-5">
+        <label for="body">Note:</label><br>
+        <input class="w-100" type="text" id="body" value="{{json.body}}" required><br>
+      </div>
+      <div class="pt-3 pb-3 row align-items-end">
+        {{!-- forms can only have get and post methods so the put and delete needs to be using js --}}
+        <span class="col text-center"><button class="btn btn-success" onclick="editNote(`{{json._id}}`)">Save</button></span>
+        <span class="col text-center"><button class="btn btn-danger" onclick="deleteNote(`{{json._id}}`)">Delete</button></span>
+      </div>
+    </li>
+  </ul>
+  <div class="my-3 row align-items-start">
+    <span class="col text-center"><a class="btn btn-success" href="/notes/user">View Your Notes</a></span>
+    <span class="col text-center"><a class="btn btn-success" href="/notes">View All Notes</a></span>
+    <span class="col text-center"><a class="btn btn-danger" href="/users/logout">Logout</a></span>
+  </div>
+</div>
+<div id="result-message"></div>
+
+<script>
+
+  function editNote(id){
+    fetch(`/notes/${id}`, {
+      method: 'put',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: document.getElementById('title').value,
+        body: document.getElementById('body').value
+      })
+    })
+    .then((res)=>{
+      const resultMessage = document.getElementById('result-message')
+      const newDiv = document.createElement('div');
+      newDiv.classList.add("fs-3", "fw-bold", "text-center")
+
+      if(res.status === 200){
+        newDiv.innerHTML = "Note Successfully Updated!"
+        resultMessage.appendChild(newDiv)
+      }else{
+        newDiv.innerHTML = "Error Updating Note"
+        resultMessage.appendChild(newDiv)
+      }
+    }) 
+  }
+  
+  function deleteNote(id){
+
+    fetch(`/notes/${id}`, {
+      method: 'delete',
+    })
+    .then((res)=>{
+      const resultMessage = document.getElementById('result-message')
+      const newDiv = document.createElement('div');
+      newDiv.classList.add("fs-3", "fw-bold", "text-center")
+
+      if(res.status === 200){
+        newDiv.innerHTML = "Note Successfully Deleted!"
+        resultMessage.appendChild(newDiv)
+      }else{
+        newDiv.innerHTML = "Error Deleting Note"
+        resultMessage.appendChild(newDiv)
+      }
+    }) 
+  }
+  
+</script>
